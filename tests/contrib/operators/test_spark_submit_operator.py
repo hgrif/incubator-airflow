@@ -45,11 +45,6 @@ class TestSparkSubmitOperator(unittest.TestCase):
     }
 
     def setUp(self):
-
-        if sys.version_info[0] == 3:
-            raise unittest.SkipTest('TestSparkSubmitOperator won\'t work with '
-                                    'python3. No need to test anything here')
-
         configuration.load_test_config()
         args = {
             'owner': 'airflow',
@@ -65,7 +60,6 @@ class TestSparkSubmitOperator(unittest.TestCase):
         )
 
         self.assertEqual(conn_id, operator._conn_id)
-
         self.assertEqual(self._config['application'], operator._application)
         self.assertEqual(self._config['conf'], operator._conf)
         self.assertEqual(self._config['files'], operator._files)
@@ -80,8 +74,6 @@ class TestSparkSubmitOperator(unittest.TestCase):
         self.assertEqual(self._config['verbose'], operator._verbose)
         self.assertEqual(self._config['java_class'], operator._java_class)
         self.assertEqual(self._config['driver_memory'], operator._driver_memory)
-
-
 
 
 if __name__ == '__main__':

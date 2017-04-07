@@ -14,8 +14,9 @@
 #
 import logging
 import os
-import subprocess
 import re
+import subprocess
+import sys
 
 from airflow.hooks.base_hook import BaseHook
 from airflow.exceptions import AirflowException
@@ -25,20 +26,25 @@ log = logging.getLogger(__name__)
 
 class SparkSubmitHook(BaseHook):
     """
-    This hook is a wrapper around the spark-submit binary to kick off a spark-submit job.
-    It requires that the "spark-submit" binary is in the PATH or the spark_home to be 
-    supplied.
+    This hook is a wrapper around the spark-submit binary to kick off a
+    spark-submit job.
+    
+    It requires that the "spark-submit" binary is in the PATH or the spark_home
+    to be supplied.
+    
     :param conf: Arbitrary Spark configuration properties
     :type conf: dict
-    :param conn_id: The connection id as configured in Airflow administration. When an
-                    invalid connection_id is supplied, it will default to yarn.
+    :param conn_id: The connection id as configured in Airflow administration.
+        When an invalid connection_id is supplied, it will default to yarn.
     :type conn_id: str
-    :param files: Upload additional files to the container running the job, separated by a
-                  comma. For example hive-site.xml.
+    :param files: Upload additional files to the container running the job,
+        separated by a comma. For example hive-site.xml.
     :type files: str
-    :param py_files: Additional python files used by the job, can be .zip, .egg or .py.
+    :param py_files: Additional python files used by the job, can be .zip, .egg
+        or .py.
     :type py_files: str
-    :param jars: Submit additional jars to upload and place them in executor classpath.
+    :param jars: Submit additional jars to upload and place them in executor
+        classpath.
     :type jars: str
     :param java_class: the main class of the Java application
     :type java_class: str
@@ -46,7 +52,8 @@ class SparkSubmitHook(BaseHook):
     :type executor_cores: int
     :param executor_memory: Memory per executor (e.g. 1000M, 2G) (Default: 1G)
     :type executor_memory: str
-    :param driver_memory: Memory allocated to the driver (e.g. 1000M, 2G) (Default: 1G)
+    :param driver_memory: Memory allocated to the driver (e.g. 1000M, 2G)
+        (Default: 1G)
     :type driver_memory: str
     :param keytab: Full path to the file that contains the keytab
     :type keytab: str
@@ -56,7 +63,8 @@ class SparkSubmitHook(BaseHook):
     :type name: str
     :param num_executors: Number of executors to launch
     :type num_executors: int
-    :param verbose: Whether to pass the verbose flag to spark-submit process for debugging
+    :param verbose: Whether to pass the verbose flag to spark-submit process
+        for debugging
     :type verbose: bool
     """
 
@@ -92,7 +100,8 @@ class SparkSubmitHook(BaseHook):
         self._sp = None
         self._yarn_application_id = None
 
-        (self._master, self._queue, self._deploy_mode, self._spark_home) = self._resolve_connection()
+        (self._master, self._queue, self._deploy_mode,
+         self._spark_home) = self._resolve_connection()
         self._is_yarn = 'yarn' in self._master
 
     def _resolve_connection(self):
@@ -137,11 +146,12 @@ class SparkSubmitHook(BaseHook):
         :type application: str
         :return: full command to be executed
         """
-        # If the spark_home is passed then build the spark-submit executable path using
-        # the spark_home; otherwise assume that spark-submit is present in the path to
-        # the executing user
+        # If the spark_home is passed then build the spark-submit executable
+        # path using the spark_home; otherwise assume that spark-submit is
+        # present in the path to the executing user
         if self._spark_home:
-            connection_cmd = [os.path.join(self._spark_home, 'bin', 'spark-submit')]
+            connection_cmd = [os.path.join(self._spark_home, 'bin',
+                                           'spark-submit')]
         else:
             connection_cmd = ['spark-submit']
 
@@ -196,23 +206,28 @@ class SparkSubmitHook(BaseHook):
         :param kwargs: extra arguments to Popen (see subprocess.Popen)
         """
         spark_submit_cmd = self._build_command(application)
-        self._sp = subprocess.Popen(spark_submit_cmd,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.PIPE,
-                                    **kwargs)
-
-        # Using two iterators here to support 'real-time' logging
-        sources = [self._sp.stdout, self._sp.stderr]
-
-        for source in sources:
-            self._process_log(iter(source.readline, b''))
-
-        output, stderr = self._sp.communicate()
-
+        # Stream stdout while also piping stderr into stdout.
+        # See http://stackoverflow.com/a/17698359.
+        if sys.version_info.major >= 3:
+            with subprocess.Popen(spark_submit_cmd, stdout=subprocess.PIPE,
+                                  stderr=subprocess.STDOUT, bufsize=1,
+                                  universal_newlines=True, **kwargs) as p:
+                for line in p.stdout:
+                    self._process_log(line)
+                self._sp = p
+        else:
+            self._sp = subprocess.Popen(
+                spark_submit_cmd, stdout=subprocess.PIPE,
+                stderr=subprocess.STDOUT, bufsize=1, **kwargs
+            )
+            with self._sp.stdout as out:
+                for line in iter(out.readline, b''):
+                    self._process_log(line)
+            self._sp.wait()  # wait for the subprocess to exit
         if self._sp.returncode:
             raise AirflowException(
-                "Cannot execute: {}. Error code is: {}. Output: {}, Stderr: {}".format(
-                    spark_submit_cmd, self._sp.returncode, output, stderr
+                "Cannot execute: {cmd}. Error code is: {code}".format(
+                    cmd=spark_submit_cmd, code=self._sp.returncode
                 )
             )
 
@@ -222,27 +237,31 @@ class SparkSubmitHook(BaseHook):
 
         :param itr: An iterator which iterates over the input of the subprocess
         """
-        # Consume the iterator
         for line in itr:
-            line = line.decode('utf-8').strip()
-            # If we run yarn cluster mode, we want to extract the application id from
-            # the logs so we can kill the application when we stop it unexpectedly
+            line = line.strip()
+            # If we run yarn cluster mode, we want to extract the application
+            # id from the itr so we can kill the application when we stop it
+            # unexpectedly
             if self._is_yarn and self._deploy_mode == 'cluster':
                 match = re.search('(application[0-9_]+)', line)
                 if match:
                     self._yarn_application_id = match.groups()[0]
-
             # Pass to logging
             logging.info(line)
 
     def on_kill(self):
         if self._sp and self._sp.poll() is None:
             logging.info('Sending kill signal to spark-submit')
-            self.sp.kill()
+            self._sp.kill()
 
             if self._yarn_application_id:
                 logging.info('Killing application on YARN')
-                yarn_kill = Popen("yarn application -kill {0}".format(self._yarn_application_id),
-                                  stdout=subprocess.PIPE,
-                                  stderr=subprocess.PIPE)
-                logging.info("YARN killed with return code: {0}".format(yarn_kill.wait()))
+                try:
+                    kill_cmd = "yarn application -kill {0}"
+                    subprocess.check_call(
+                        kill_cmd.format(self._yarn_application_id),
+                    )
+                    logging.info("YARN successfully killed.")
+                except subprocess.CalledProcessError as e:
+                    msg = "YARN killed with return code: {0}"
+                    logging.info(msg.format(e.returncode))

@@ -23,22 +23,28 @@ log = logging.getLogger(__name__)
 
 class SparkSubmitOperator(BaseOperator):
     """
-    This hook is a wrapper around the spark-submit binary to kick off a spark-submit job.
-    It requires that the "spark-submit" binary is in the PATH or the spark-home is set
-    in the extra on the connection.
-    :param application: The application that submitted as a job, either jar or py file.
+    This operator is a wrapper around the spark-submit binary to kick off a
+    spark-submit job.
+    
+    It requires that the "spark-submit" binary is in the PATH or the spark-home
+    is set in the extra on the connection.
+    
+    :param application: The application that submitted as a job, either jar or
+        py file.
     :type application: str
     :param conf: Arbitrary Spark configuration properties
     :type conf: dict
-    :param conn_id: The connection id as configured in Airflow administration. When an
-                    invalid connection_id is supplied, it will default to yarn.
+    :param conn_id: The connection id as configured in Airflow administration.
+        When an invalid connection_id is supplied, it will default to yarn.
     :type conn_id: str
-    :param files: Upload additional files to the container running the job, separated by a
-                  comma. For example hive-site.xml.
+    :param files: Upload additional files to the container running the job,
+        separated by a comma. For example hive-site.xml.
     :type files: str
-    :param py_files: Additional python files used by the job, can be .zip, .egg or .py.
+    :param py_files: Additional python files used by the job, can be .zip, .egg
+        or .py.
     :type py_files: str
-    :param jars: Submit additional jars to upload and place them in executor classpath.
+    :param jars: Submit additional jars to upload and place them in executor
+        classpath.
     :type jars: str
     :param java_class: the main class of the Java application
     :type java_class: str
@@ -46,7 +52,8 @@ class SparkSubmitOperator(BaseOperator):
     :type executor_cores: int
     :param executor_memory: Memory per executor (e.g. 1000M, 2G) (Default: 1G)
     :type executor_memory: str
-    :param driver_memory: Memory allocated to the driver (e.g. 1000M, 2G) (Default: 1G)
+    :param driver_memory: Memory allocated to the driver (e.g. 1000M, 2G)
+        (Default: 1G)
     :type driver_memory: str
     :param keytab: Full path to the file that contains the keytab
     :type keytab: str
@@ -56,7 +63,8 @@ class SparkSubmitOperator(BaseOperator):
     :type name: str
     :param num_executors: Number of executors to launch
     :type num_executors: int
-    :param verbose: Whether to pass the verbose flag to spark-submit process for debugging
+    :param verbose: Whether to pass the verbose flag to spark-submit process
+        for debugging
     :type verbose: bool
     """
 

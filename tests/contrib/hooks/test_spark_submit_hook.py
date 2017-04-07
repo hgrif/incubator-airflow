@@ -109,11 +109,14 @@ class TestSparkSubmitHook(unittest.TestCase):
     def test_submit(self, mock_process):
         # We don't have spark-submit available, and this is hard to mock, so let's
         # just use this simple mock.
-        mock_Popen = mock_process.Popen.return_value
-        mock_Popen.stdout = StringIO(u'stdout')
-        mock_Popen.stderr = StringIO(u'stderr')
-        mock_Popen.returncode = None
-        mock_Popen.communicate.return_value = ['extra stdout', 'extra stderr']
+        if sys.version_info.major >= 3:
+            mock_Popen = mock_process.Popen.return_value
+            mock_Popen.__enter__.return_value.stdout = ['log']
+            mock_Popen.__enter__.return_value.returncode = None
+        else:
+            mock_Popen = mock_process.Popen.return_value
+            mock_Popen.stdout.__enter__.return_value = StringIO(u'log')
+            mock_Popen.returncode = None
         hook = SparkSubmitHook()
         hook.submit(self._spark_job_file)
 
