@@ -16,7 +16,6 @@ import unittest
 import datetime
 from dateutil.tz import tzlocal
 from mock import MagicMock, patch
-import boto3
 
 from airflow import configuration
 from airflow.contrib.sensors.emr_step_sensor import EmrStepSensor

@@ -224,3 +224,6 @@ class RunStateTest(unittest.TestCase):
     def test_is_successful(self):
         run_state = RunState('TERMINATED', 'SUCCESS', '')
         self.assertTrue(run_state.is_successful)
+
+if __name__ == '__main__':
+    unittest.main()

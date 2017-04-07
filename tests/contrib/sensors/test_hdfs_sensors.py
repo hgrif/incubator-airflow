@@ -249,3 +249,6 @@ class HdfsSensorRegexTests(unittest.TestCase):
         # Then
         with self.assertRaises(AirflowSensorTimeout):
             task.execute(None)
+
+if __name__ == '__main__':
+    unittest.main()

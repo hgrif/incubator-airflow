@@ -183,3 +183,5 @@ class DatabricksSubmitRunOperatorTest(unittest.TestCase):
 
         db_mock.cancel_run.assert_called_once_with(RUN_ID)
 
+if __name__ == '__main__':
+    unittest.main()

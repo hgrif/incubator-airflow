@@ -54,3 +54,6 @@ class DataFlowHookTest(unittest.TestCase):
             dataflow=PY_FILE, py_options=PY_OPTIONS)
         internal_dataflow_mock.assert_called_once_with(
             TASK_ID, OPTIONS, PY_FILE, mock.ANY, ['python'] + PY_OPTIONS)
+
+if __name__ == '__main__':
+    unittest.main()
